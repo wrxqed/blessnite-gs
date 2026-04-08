@@ -37,22 +37,49 @@ void Abilities::GiveAbility(UAbilitySystemComponent* AbilitySystemComponent, TSu
 
 void Abilities::GiveAbilitySet(UAbilitySystemComponent* AbilitySystemComponent, UFortAbilitySet* Set)
 {
-    for (auto& Abilite : Set->GameplayAbilities)
+    if (!AbilitySystemComponent || !Set)
+        return;
+
+    if (!Set->Class || !Set->IsA(UFortAbilitySet::StaticClass()))
     {
-        printf("GiveAbilitySet[%s]\n", Abilite->GetName().c_str());
+        printf("GiveAbilitySet<invalid set object>\n");
+        return;
     }
 
-    printf("on %s\n", AbilitySystemComponent->GetOwner()->GetName().c_str());
+    printf("GiveAbilitySet<%s>\n", Set->GetName().c_str());
+    printf("on %s\n", AbilitySystemComponent->GetOwner() ? AbilitySystemComponent->GetOwner()->GetName().c_str() : "null");
+
+    for (auto& Ability : Set->GameplayAbilities)
+    {
+        if (!Ability)
+        {
+            printf("GiveAbilitySet[null]\n");
+            continue;
+        }
+
+        printf("GiveAbilitySet[%s]\n", Ability->GetName().c_str());
+    }
+
     /*TScriptInterface<IAbilitySystemInterface> ScriptInterface;
     ScriptInterface.ObjectPointer = AbilitySystemComponent->GetOwner();
     ScriptInterface.InterfacePointer = Utils::GetInterface<IFortAbilitySystemInterface>(ScriptInterface.ObjectPointer);
     UFortKismetLibrary::EquipFortAbilitySet(ScriptInterface, Set, nullptr);*/
-    if (Set)
+
+    for (auto& GameplayAbility : Set->GameplayAbilities)
     {
-        for (auto& GameplayAbility : Set->GameplayAbilities)
-            GiveAbility(AbilitySystemComponent, GameplayAbility);
-        for (auto& GameplayEffect : Set->PassiveGameplayEffects)
-            AbilitySystemComponent->BP_ApplyGameplayEffectToSelf(GameplayEffect.GameplayEffect.Get(), GameplayEffect.Level, AbilitySystemComponent->MakeEffectContext());
+        if (!GameplayAbility)
+            continue;
+
+        GiveAbility(AbilitySystemComponent, GameplayAbility);
+    }
+
+    for (auto& GameplayEffect : Set->PassiveGameplayEffects)
+    {
+        auto Effect = GameplayEffect.GameplayEffect.Get();
+        if (!Effect)
+            continue;
+
+        AbilitySystemComponent->BP_ApplyGameplayEffectToSelf(Effect, GameplayEffect.Level, AbilitySystemComponent->MakeEffectContext());
     }
 }
 

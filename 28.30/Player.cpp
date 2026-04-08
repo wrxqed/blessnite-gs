@@ -7,11 +7,17 @@ void Player::ServerAcknowledgePossession(UObject* Context, FFrame& Stack)
 	APawn* Pawn;
 	Stack.StepCompiledIn(&Pawn);
 	Stack.IncrementCode();
+	auto PlayerController = (APlayerController*)Context;
+	std::cout << "[NET] ServerAcknowledgePossession controller="
+		<< (PlayerController ? PlayerController->GetName() : "null")
+		<< " pawn="
+		<< (Pawn ? Pawn->GetName() : "null")
+		<< std::endl;
 
 	auto InternalServerAcknowledgePossession = (void (*)(UObject*, APawn*)) (Sarah::Offsets::ImageBase + 0x663D450);
 	InternalServerAcknowledgePossession(Context, Pawn);	
 
-	return callOG(((APlayerController*)Context), L"/Script/Engine.PlayerController", ServerAcknowledgePossession, Pawn);
+	return callOG(PlayerController, L"/Script/Engine.PlayerController", ServerAcknowledgePossession, Pawn);
 
 }
 

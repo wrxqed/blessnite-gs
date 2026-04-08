@@ -194,7 +194,14 @@ bool GameMode::ReadyToStartMatch(UObject* Context, FFrame& Stack, bool* Ret) {
 				auto AbilitySet = GameFeatureData->PlayerAbilitySet.Get();
 				auto LootPackageData = LootTableData.LootPackageData.Get();
 				if (AbilitySet) {
-					if (AbilitySet->GetName() == "GAS_Juno_SharedBy_AllMinifigs" || AbilitySet->GetName() == "GAS_JamIsland_Defaults" || AbilitySet->GetName() == "GAS_PilgrimQuickplay_Defaults" || AbilitySet->GetName() == "GAS_Athena_PilgrimCore" || AbilitySet->GetName() == "AbilitySet_24Movement")
+					if (!AbilitySet->Class || !AbilitySet->IsA(UFortAbilitySet::StaticClass()))
+					{
+						printf("Skipping invalid PlayerAbilitySet object: %s class=%s\n",
+							AbilitySet->GetName().c_str(),
+							AbilitySet->Class ? AbilitySet->Class->GetName().c_str() : "null");
+						continue;
+					}
+					if (AbilitySet->GetName() == "GAS_Juno_SharedBy_AllMinifigs" || AbilitySet->GetName() == "GAS_JamIsland_Defaults" || AbilitySet->GetName() == "GAS_PilgrimQuickplay_Defaults" || AbilitySet->GetName() == "GAS_Athena_PilgrimCore")
 						continue;
 					printf("Ability set: %s\n", UKismetSystemLibrary::GetPathName(AbilitySet).ToString().c_str());
 					AbilitySet->AddToRoot();
@@ -301,8 +308,16 @@ APawn* GameMode::SpawnDefaultPawnFor(UObject* Context, FFrame& Stack, APawn** Re
 	auto GameMode = (AFortGameModeAthena*)Context;
 	auto PlayerController = NewPlayer->Cast<AFortPlayerController>();
 	if (!PlayerController) return *Ret = nullptr;
+	std::cout << "[NET] SpawnDefaultPawnFor controller="
+		<< PlayerController->GetName()
+		<< " start="
+		<< (StartSpot ? StartSpot->GetName() : "null")
+		<< std::endl;
 	auto Transform = StartSpot->GetTransform();
 	auto Pawn = GameMode->SpawnDefaultPawnAtTransform(NewPlayer, Transform);
+	std::cout << "[NET] SpawnDefaultPawnFor spawned pawn="
+		<< (Pawn ? Pawn->GetName() : "null")
+		<< std::endl;
 
 
 	static bool IsFirstPlayer = false;
@@ -402,6 +417,13 @@ void GameMode::HandleStartingNewPlayer(UObject* Context, FFrame& Stack) {
 	auto GameMode = (AFortGameModeAthena*)Context;
 	auto GameState = (AFortGameStateAthena*)GameMode->GameState;
 	AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
+	std::cout << "[NET] HandleStartingNewPlayer controller="
+		<< (NewPlayer ? NewPlayer->GetName() : "null")
+		<< " playerState="
+		<< (PlayerState ? PlayerState->GetName() : "null")
+		<< " teamIndex="
+		<< (PlayerState ? PlayerState->TeamIndex : -1)
+		<< std::endl;
 
 	PlayerState->SquadId = PlayerState->TeamIndex - 3;
 	PlayerState->OnRep_SquadId();
@@ -425,6 +447,9 @@ void GameMode::HandleStartingNewPlayer(UObject* Context, FFrame& Stack) {
 
 	NewPlayer->WorldInventory = /*Utils::SpawnActor<AFortInventory>(NewPlayer->WorldInventoryClass, FVector{})*/ ((AFortInventory * (*)(UWorld*, UClass*, FTransform const*, FActorSpawnParameters*))(Sarah::Offsets::ImageBase + 0x1999190))(UWorld::GetWorld(), NewPlayer->WorldInventoryClass, new FTransform(FVector(), FRotator()), &SpawnParams);
 	NewPlayer->WorldInventory->SetOwner(NewPlayer);
+	std::cout << "[NET] HandleStartingNewPlayer inventory="
+		<< (NewPlayer->WorldInventory ? NewPlayer->WorldInventory->GetName() : "null")
+		<< std::endl;
 
 
 	if (!NewPlayer->MatchReport)

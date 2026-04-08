@@ -79,6 +79,27 @@ struct FSendUpdateParams
 static bool bStartedBus = false;
 void Misc::TickFlush(UNetDriver* Driver, float DeltaTime)
 {
+	static int LastConnectionCount = -1;
+	static int LastOpenConnectionCount = -1;
+
+	int ConnectionCount = Driver ? Driver->ClientConnections.Num() : 0;
+	int OpenConnectionCount = 0;
+	if (Driver)
+	{
+		for (UNetConnection* Connection : Driver->ClientConnections)
+		{
+			if (Connection)
+				OpenConnectionCount++;
+		}
+	}
+
+	if (ConnectionCount != LastConnectionCount || OpenConnectionCount != LastOpenConnectionCount)
+	{
+		LastConnectionCount = ConnectionCount;
+		LastOpenConnectionCount = OpenConnectionCount;
+		std::cout << "[NET] TickFlush connections=" << ConnectionCount << " open=" << OpenConnectionCount << std::endl;
+	}
+
 	auto ReplicationSystem = *(UReplicationSystem**)(__int64(Driver) + 0x748);
 	if (Driver->ClientConnections.Num() > 0 && Driver->ClientConnections[0]->InternalAck == false)
 	{
@@ -133,10 +154,12 @@ void Misc::Listen()
 	if (((bool (*)(UNetDriver*, UWorld*, FURL&, bool, FString&))Sarah::Offsets::InitListen)(NetDriver, World, /*World->PersistentLevel->*/URL, false, Err)) {
 
 		((void (*)(UNetDriver*, UWorld*))Sarah::Offsets::SetWorld)(NetDriver, World);
+		std::cout << "[NET] Listen success on port " << URL.Port << std::endl;
 	}
 	else
 	{
 		Log(L"Failed to listen");
+		std::cout << "[NET] Listen failed: " << Err.ToString() << std::endl;
 	}
 }
 
